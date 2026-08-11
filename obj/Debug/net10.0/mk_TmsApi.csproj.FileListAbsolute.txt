@@ -26,3 +26,4 @@
 /Users/administrator/mk_TmsApi/obj/Debug/net10.0/mk_TmsApi.pdb
 /Users/administrator/mk_TmsApi/obj/Debug/net10.0/mk_TmsApi.genruntimeconfig.cache
 /Users/administrator/mk_TmsApi/obj/Debug/net10.0/ref/mk_TmsApi.dll
+/Users/administrator/mk_TmsApi/obj/Debug/net10.0/mk_TmsApi.sourcelink.json
