@@ -27,3 +27,9 @@
 /Users/administrator/mk_TmsApi/obj/Debug/net10.0/mk_TmsApi.genruntimeconfig.cache
 /Users/administrator/mk_TmsApi/obj/Debug/net10.0/ref/mk_TmsApi.dll
 /Users/administrator/mk_TmsApi/obj/Debug/net10.0/mk_TmsApi.sourcelink.json
+/Users/administrator/mk_TmsApi/obj/Debug/net10.0/mk_TmsApi.csproj.AssemblyReference.cache
+/Users/administrator/mk_TmsApi/bin/Debug/net10.0/Microsoft.AspNetCore.OpenApi.dll
+/Users/administrator/mk_TmsApi/bin/Debug/net10.0/Microsoft.OpenApi.dll
+/Users/administrator/mk_TmsApi/bin/Debug/net10.0/Scalar.AspNetCore.dll
+/Users/administrator/mk_TmsApi/obj/Debug/net10.0/mk_TmsApi.MvcApplicationPartsAssemblyInfo.cs
+/Users/administrator/mk_TmsApi/obj/Debug/net10.0/mk_TmsApi.csproj.Up2Date

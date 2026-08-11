@@ -62,21 +62,9 @@ public class EnrollmentService : IEnrollmentService
         }
         return Task.FromResult(removed);
     }
-    // public Task<EnrllmentRecord> EnrollAsync(string studentid, string courseCode)
-    // {
-    //     var existing = _store.values.FirstOrDefault(e=> e.StudentId == studentid && e.CourseCode == courseCode);
-    //     if(existing is not null)
-    //     {
-    //         _logger.LogWarning(" Duplicate enrollment attempt {StudentId} already in {CourseCode} (record {EnrollmentId})"),
-    //         studentid, courseCode, existing.Id);
-    //         return Task.FromResult(existing);
-    //     }
-    //     var id = Guid.NewGuid().ToString("N")[..8];
-    //     var record = new EnrollmentRecord(id, studentid, courseCode, DateTime.UtcNow);
-    //     _store[id] = record;
-    //     _logger.LogInformation(" {StudentId} in {CourseCode} record {
-    // }
 }
+public class TmsDatabaseException(string Message) : Exception(Message);
+
 // --- The data shape ---
 public record EnrollmentRecord(
     string Id,

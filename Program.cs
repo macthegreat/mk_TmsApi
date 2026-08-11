@@ -1,3 +1,11 @@
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Mvc;
+using Scalar.AspNetCore;
+
+
+
+
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -8,16 +16,30 @@ builder.Services.AddAuthorization();
 builder.Services.AddSingleton<EnrollmentWorker>();
 builder.Services.AddScoped<IEnrollmentService, EnrollmentService>();
 builder.Services.AddOptions<PaymentOptions>().BindConfiguration("payments").ValidateDataAnnotations().ValidateOnStart();
+builder.Services.AddOpenApi();
 
 builder.Host.UseDefaultServiceProvider(options =>
 {
-options.ValidateScopes = true;
-options.ValidateOnBuild = true; });
+    options.ValidateScopes = true;
+    options.ValidateOnBuild = true;
+});
+
+builder.Services.AddProblemDetails();
+
 
 
 var app = builder.Build();
 
+if (app.Environment.IsDevelopment())
+{
+    app.MapOpenApi();
+    app.MapScalarApiReference();
+
+}
+
 // Configure the HTTP request pipeline.
+app.UseExceptionHandler();
+app.UseStatusCodePages();
 
 app.UseRouting();
 
@@ -41,8 +63,14 @@ app.MapGet("/api/assessments/results", () => Results.Ok(new
 
 app.MapGet("/api/enrollments/worker-smoke", (EnrollmentWorker worker) =>
 {
-worker.ProcessBatch();
-return Results.Ok("processed"); });
+    worker.ProcessBatch();
+    return Results.Ok("processed");
+});
+
+app.MapGet("/api/error", () =>
+{
+    throw new TmsDatabaseException("Simulated database failure for ProblemDetails testing");
+});
 
 
 

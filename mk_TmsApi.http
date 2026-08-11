@@ -4,3 +4,6 @@ GET {{mk_TmsApi_HostAddress}}/weatherforecast/
 Accept: application/json
 
 ###
+
+GET {{mk_TmsApi_HostAddress}}/api/assessments/results
+Accept: application/json
