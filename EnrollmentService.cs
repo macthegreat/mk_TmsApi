@@ -66,9 +66,5 @@ public class EnrollmentService : IEnrollmentService
 public class TmsDatabaseException(string Message) : Exception(Message);
 
 // --- The data shape ---
-public record EnrollmentRecord(
-    string Id,
-string StudentId,
-string CourseCode,
-DateTime EnrolledAt);
+
 

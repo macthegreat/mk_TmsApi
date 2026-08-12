@@ -5,5 +5,10 @@ Accept: application/json
 
 ###
 
-GET {{mk_TmsApi_HostAddress}}/api/assessments/results
+GET {{mk_TmsApi_HostAddress}}/api/assessments/results 
+Accept: application/json
+
+
+###
+POST {{mk_TmsApi_HostAddress}}/api/Enrollments 
 Accept: application/json

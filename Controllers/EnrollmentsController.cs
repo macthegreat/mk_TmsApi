@@ -1,9 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 
 [ApiController]
-[Route("api/[controller]")]
-
-public class EnrollmentController(EnrollmentService enrollmentService) : ControllerBase
+[Route("api/enrollments")]
+public class EnrollmentsController(IEnrollmentService enrollmentService) : ControllerBase
 {
     [HttpGet]
     public async Task<IActionResult> GetAll()
