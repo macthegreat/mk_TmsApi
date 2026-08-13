@@ -101,4 +101,50 @@ public class TestController(TmsDbContext context) : ControllerBase
 
         return Ok(list);
     }
+
+    [HttpGet("students")]
+    public async Task<IActionResult> GetStudents(
+    int page = 1,
+    CancellationToken cancellationToken = default)
+    {
+        const int pageSize = 20;
+
+        if (page < 1)
+        {
+            return BadRequest(new
+            {
+                Message = "Page must be greater than 0."
+            });
+        }
+
+        var students = await context.Students
+            .OrderBy(s => s.Name)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+
+        return Ok(students);
+    }
+
+    [HttpGet("top-courses")]
+    public async Task<IActionResult> GetTopCourses(
+    CancellationToken cancellationToken = default)
+    {
+        var courses = await context.Enrollments
+            .GroupBy(e => new
+            {
+                e.CourseId,
+                e.Course.Title
+            })
+            .Select(g => new
+            {
+                CourseTitle = g.Key.Title,
+                EnrollmentCount = g.Count()
+            })
+            .OrderByDescending(x => x.EnrollmentCount)
+            .Take(5)
+            .ToListAsync(cancellationToken);
+
+        return Ok(courses);
+    }
 }
