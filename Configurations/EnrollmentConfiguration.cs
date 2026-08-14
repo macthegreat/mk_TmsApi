@@ -22,11 +22,15 @@ public class EnrollmentConfiguration : IEntityTypeConfiguration<Enrollment>
         builder.HasOne(e => e.Student)
             .WithMany(s => s.Enrollments)
             .HasForeignKey(e => e.StudentId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasOne(e => e.Course)
             .WithMany(c => c.Enrollments)
             .HasForeignKey(e => e.CourseId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Property(e => e.IsArchived)
+            .IsRequired()
+            .HasDefaultValue(false);    
     }
 }

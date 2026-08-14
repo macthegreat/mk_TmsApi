@@ -147,4 +147,84 @@ public class TestController(TmsDbContext context) : ControllerBase
 
         return Ok(courses);
     }
+
+    //n+1 trap simulation
+
+    [HttpGet("n-plus-one")]
+public async Task<IActionResult> TestNPlusOne(
+    CancellationToken cancellationToken)
+{
+    var students = await context.Students
+        .AsNoTracking()
+        .ToListAsync(cancellationToken);
+
+    var report = new List<object>();
+
+    foreach (var s in students)
+    {
+        var count = await context.Enrollments
+            .AsNoTracking()
+            .CountAsync(
+                e => e.StudentId == s.Id,
+                cancellationToken);
+
+        Console.WriteLine(
+            $"{s.Name}: {count} enrollments"
+        );
+
+        report.Add(new
+        {
+            s.Name,
+            EnrollmentCount = count
+        });
+    }
+
+    return Ok(report);
+}
+
+//n=1 trap hundled 
+
+[HttpGet("n-plus-one-fixed")]
+public async Task<IActionResult> TestNPlusOneFixed(
+    CancellationToken cancellationToken)
+{
+    var report = await context.Students
+        .AsNoTracking()
+        .Select(s => new
+        {
+            s.Name,
+            EnrollmentCount = s.Enrollments.Count
+        })
+        .ToListAsync(cancellationToken);
+
+    foreach (var r in report)
+    {
+        Console.WriteLine(
+            $"{r.Name}: {r.EnrollmentCount} enrollments"
+        );
+    }
+
+    return Ok(report);
+}
+
+[HttpPost("enrollments/archive")]
+public async Task<IActionResult> ArchiveOldEnrollments(
+    CancellationToken cancellationToken)
+{
+    var cutoff = DateTime.UtcNow.AddYears(-1);
+
+    var affected = await context.Enrollments
+        .Where(e => e.EnrolledAt < cutoff && !e.IsArchived)
+        .ExecuteUpdateAsync(
+            setters => setters.SetProperty(
+                e => e.IsArchived,
+                true),
+            cancellationToken);
+
+    return Ok(new
+    {
+        cutoff,
+        archived = affected
+    });
+}
 }

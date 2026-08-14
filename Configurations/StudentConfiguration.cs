@@ -22,8 +22,20 @@ public class StudentConfiguration : IEntityTypeConfiguration<Student>
         builder.Property(s => s.IsActive)
             .IsRequired();
 
+        builder.Property<DateTime>("LastUpdated")
+            .IsRequired()
+            .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+        builder.Property(s => s.Version)
+            .HasColumnName("xmin")
+            .IsRowVersion()
+            .ValueGeneratedOnAddOrUpdate();
+
+         builder.HasQueryFilter(s => !s.IsDeleted);
+
         builder.HasMany(s => s.Enrollments)
             .WithOne(e => e.Student)
             .HasForeignKey(e => e.StudentId);
+
     }
 }
