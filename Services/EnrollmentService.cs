@@ -1,3 +1,8 @@
+using Microsoft.EntityFrameworkCore;
+using MK_TmsApi.Data;
+using MK_TmsApi.Dtos;
+using MK_TmsApi.Entities;
+
 public interface IEnrollmentService
 {
     Task<EnrollmentRecord> EnrollAsync(string studentId, string courseCode);
@@ -6,16 +11,12 @@ public interface IEnrollmentService
     Task<bool> DeleteAsync(string id);
 }
 
-public class EnrollmentService : IEnrollmentService
+public class EnrollmentService(TmsDbContext context, ILogger<EnrollmentService> logger) : IEnrollmentService
 {
     private readonly Dictionary<string, EnrollmentRecord> _store = new();
 
     private readonly ILogger<EnrollmentService> _logger;
-    public EnrollmentService(ILogger<EnrollmentService> logger)
-    {
-        _logger = logger;
-
-    }
+   
     public Task<EnrollmentRecord> EnrollAsync(string studentId, string courseCode)
     {
         var existing = _store.Values.FirstOrDefault(e => e.StudentId == studentId && e.CourseCode == courseCode);
@@ -35,7 +36,7 @@ public class EnrollmentService : IEnrollmentService
     }
     public Task<EnrollmentRecord?> GetByIdAsync(string id)
     {
-        
+
         _store.TryGetValue(id, out var record);
         if (record is null)
         {
@@ -50,7 +51,7 @@ public class EnrollmentService : IEnrollmentService
     }
     public Task<bool> DeleteAsync(string id)
     {
-        
+
         var removed = _store.Remove(id);
         if (removed)
         {
@@ -61,6 +62,41 @@ public class EnrollmentService : IEnrollmentService
             _logger.LogWarning("Enrollment record {EnrollmentId} not found for deletion", id);
         }
         return Task.FromResult(removed);
+    }
+
+    public Task<EnrollmentResponseDto?> GetByIdAsync(int courseId, int id, CancellationToken ct) =>
+    context.Enrollments
+    .AsNoTracking()
+    .Where(e => e.Id == id && e.CourseId == courseId)
+    .Select(e => new EnrollmentResponseDto(e.Id, e.CourseId, e.StudentId, e.EnrolledAt))
+    .FirstOrDefaultAsync(ct);
+
+    public async Task<EnrollmentResponseDto> CreateAsync(int courseId, EnrollStudentRequest request, CancellationToken ct)
+    {
+
+        var enrollment = new Enrollment
+        {
+            CourseId = courseId,
+            StudentId = request.StudentId,
+            EnrolledAt =DateTime.UtcNow
+        };
+        context.Enrollments.Add(enrollment);
+       await context.SaveChangesAsync(ct);
+
+
+            logger.LogInformation(
+            "Created enrollment {EnrollmentId} for student {StudentId} in course {CourseId}",
+            enrollment.Id,
+            enrollment.StudentId,
+            enrollment.CourseId);
+
+        var result = await GetByIdAsync(
+            courseId,
+            enrollment.Id,
+            ct);
+
+        return result!;
+
     }
 }
 public class TmsDatabaseException(string Message) : Exception(Message);

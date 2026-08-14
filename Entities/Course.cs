@@ -15,8 +15,5 @@ public class Course
 
     public ICollection<Assessment> Assessments { get; set; } = new List<Assessment>();
 
-    public ICollection<Certificate> Certificates { get; set; } = new List<Certificate>();
-
-
-   
+    public ICollection<Certificate> Certificates { get; set; } = new List<Certificate>();  
 }

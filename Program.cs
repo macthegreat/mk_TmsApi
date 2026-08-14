@@ -4,6 +4,7 @@ using Scalar.AspNetCore;
 using Microsoft.EntityFrameworkCore;
 using MK_TmsApi.Entities;
 using MK_TmsApi.Data;
+using MK_TmsApi.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -29,6 +30,9 @@ builder.Host.UseDefaultServiceProvider(options =>
 });
 
 builder.Services.AddProblemDetails();
+
+builder.Services.AddScoped<ICourseService, CourseService>();
+builder.Services.AddScoped<IEnrollmentService, EnrollmentService>();
 
 var app = builder.Build();
 
@@ -91,9 +95,9 @@ new() { RegistrationNumber = "TMS-2026-0005", Name = "EvanWright", GPA = 2.5m, I
 
         var courses= new List<Course>
         {
-            new() { Code = "CS-101", Title = "Introduction to ComputerScience", Capacity = 30 },
-            new() { Code = "CS-201", Title = "Data Structures and Algorithms", Capacity = 25 },
-            new() { Code = "MAT-101", Title = "Calculus I", Capacity =40 }
+            new() { Code = "CS-101", Title = "Introduction to ComputerScience", MaxCapacity = 30 },
+            new() { Code = "CS-201", Title = "Data Structures and Algorithms", MaxCapacity = 25 },
+            new() { Code = "MAT-101", Title = "Calculus I", MaxCapacity =40 }
         };
         context.Courses.AddRange(courses);
         context.SaveChanges();

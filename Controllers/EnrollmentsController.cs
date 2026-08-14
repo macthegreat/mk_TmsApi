@@ -1,9 +1,16 @@
 using Microsoft.AspNetCore.Mvc;
+using MK_TmsApi.Dtos;
+using MK_TmsApi.Services;
+
+namespace MK_TmsApi.Controllers;
 
 [ApiController]
 [Route("api/enrollments")]
-public class EnrollmentsController(IEnrollmentService enrollmentService) : ControllerBase
+[Route("api/courses/{courseId:int}/enrollments")]
+public class EnrollmentsController(ICourseService courseService , IEnrollmentService enrollmentService) : ControllerBase
 {
+    
+
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
@@ -34,7 +41,7 @@ public class EnrollmentsController(IEnrollmentService enrollmentService) : Contr
         return deleted ? NoContent() : NotFound();
     }
 
-
+/// stsrt from here
 
 }
 public record CreateEnrollmentRequest(string StudentId, string CourseCode);
