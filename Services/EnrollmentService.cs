@@ -3,20 +3,22 @@ using MK_TmsApi.Data;
 using MK_TmsApi.Dtos;
 using MK_TmsApi.Entities;
 
-public interface IEnrollmentService
-{
-    Task<EnrollmentRecord> EnrollAsync(string studentId, string courseCode);
-    Task<EnrollmentRecord?> GetByIdAsync(string id);
-    Task<IReadOnlyList<EnrollmentRecord>> GetAllAsync();
-    Task<bool> DeleteAsync(string id);
-}
+
+namespace MK_TmsApi.Services;
+
+// public interface IEnrollmentService
+// {
+//     Task<EnrollmentRecord> EnrollAsync(string studentId, string courseCode);
+//     Task<EnrollmentRecord?> GetByIdAsync(string id);
+//     Task<IReadOnlyList<EnrollmentRecord>> GetAllAsync();
+//     Task<bool> DeleteAsync(string id);
+// }
 
 public class EnrollmentService(TmsDbContext context, ILogger<EnrollmentService> logger) : IEnrollmentService
 {
     private readonly Dictionary<string, EnrollmentRecord> _store = new();
 
     private readonly ILogger<EnrollmentService> _logger;
-   
     public Task<EnrollmentRecord> EnrollAsync(string studentId, string courseCode)
     {
         var existing = _store.Values.FirstOrDefault(e => e.StudentId == studentId && e.CourseCode == courseCode);
@@ -80,8 +82,8 @@ public class EnrollmentService(TmsDbContext context, ILogger<EnrollmentService> 
             StudentId = request.StudentId,
             EnrolledAt =DateTime.UtcNow
         };
-        context.Enrollments.Add(enrollment);
-       await context.SaveChangesAsync(ct);
+    context.Enrollments.Add(enrollment);
+    await context.SaveChangesAsync(ct);
 
 
             logger.LogInformation(

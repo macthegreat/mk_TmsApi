@@ -1,3 +1,4 @@
+namespace MK_TmsApi.Services;
 public class EnrollmentWorker(IServiceScopeFactory scopeFactory)
 {
 public void ProcessBatch()

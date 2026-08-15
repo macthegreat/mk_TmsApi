@@ -5,6 +5,8 @@ using Microsoft.EntityFrameworkCore;
 using MK_TmsApi.Entities;
 using MK_TmsApi.Data;
 using MK_TmsApi.Services;
+using Microsoft.Extensions.Options;
+using MK_TmsApi.Filters;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -33,6 +35,10 @@ builder.Services.AddProblemDetails();
 
 builder.Services.AddScoped<ICourseService, CourseService>();
 builder.Services.AddScoped<IEnrollmentService, EnrollmentService>();
+builder.Services.AddControllers(Options =>
+{
+    Options.Filters.Add<AuditLogFilter>();
+});
 
 var app = builder.Build();
 
@@ -112,6 +118,13 @@ new() { RegistrationNumber = "TMS-2026-0005", Name = "EvanWright", GPA = 2.5m, I
         context.Enrollments.AddRange(enrollments);
         context.SaveChanges();
     }
+}
+
+if (app.Environment.IsDevelopment())
+{
+using var scope = app.Services.CreateScope();
+var context = scope.ServiceProvider.GetRequiredService<TmsDbContext>();
+    await DataSeeder.SeedAsync(context);
 }
 
 app.Run();

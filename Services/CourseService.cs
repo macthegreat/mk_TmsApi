@@ -48,4 +48,60 @@ public class CourseService(
             .AnyAsync(c => c.Code == code, ct);
     }
 
+
+//m6s2part c
+
+
+public async Task<PagedResponse<CourseResponseDto>> GetCoursesAsync(
+    PagedRequest request,
+    CancellationToken ct)
+{
+    var query = context.Courses
+        .AsNoTracking();
+
+    if (!string.IsNullOrWhiteSpace(request.Search))
+    {
+        var search = request.Search.Trim();
+
+        query = query.Where(c =>
+            EF.Functions.ILike(c.Title, $"%{search}%") ||
+            EF.Functions.ILike(c.Code, $"%{search}%"));
+    }
+
+    var totalCount = await query.CountAsync(ct);
+
+    IQueryable<Course> orderedQuery;
+
+    if (request.Descending)
+    {
+        orderedQuery = query
+            .OrderByDescending(c => c.Title)
+            .ThenByDescending(c => c.Id);
+    }
+    else
+    {
+        orderedQuery = query
+            .OrderBy(c => c.Title)
+            .ThenBy(c => c.Id);
+    }
+
+    var items = await orderedQuery
+        .Skip((request.Page - 1) * request.PageSize)
+        .Take(request.PageSize)
+        .Select(c => new CourseResponseDto(
+            c.Id,
+            c.Code,
+            c.Title,
+            c.MaxCapacity,
+            c.Enrollments.Count))
+        .ToListAsync(ct);
+
+    return new PagedResponse<CourseResponseDto>
+    {
+        Items = items,
+        TotalCount = totalCount,
+        Page = request.Page,
+        PageSize = request.PageSize
+    };
+}
 }
