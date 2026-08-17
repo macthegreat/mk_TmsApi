@@ -1,0 +1,16 @@
+/Users/administrator/mk_TmsApi/TmsApi.Application/bin/Debug/net10.0/TmsApi.Application.deps.json
+/Users/administrator/mk_TmsApi/TmsApi.Application/bin/Debug/net10.0/TmsApi.Application.dll
+/Users/administrator/mk_TmsApi/TmsApi.Application/bin/Debug/net10.0/TmsApi.Application.pdb
+/Users/administrator/mk_TmsApi/TmsApi.Application/bin/Debug/net10.0/TmsApi.Domain.dll
+/Users/administrator/mk_TmsApi/TmsApi.Application/bin/Debug/net10.0/TmsApi.Domain.pdb
+/Users/administrator/mk_TmsApi/TmsApi.Application/obj/Debug/net10.0/TmsApi.Application.csproj.AssemblyReference.cache
+/Users/administrator/mk_TmsApi/TmsApi.Application/obj/Debug/net10.0/TmsApi.Application.GeneratedMSBuildEditorConfig.editorconfig
+/Users/administrator/mk_TmsApi/TmsApi.Application/obj/Debug/net10.0/TmsApi.Application.AssemblyInfoInputs.cache
+/Users/administrator/mk_TmsApi/TmsApi.Application/obj/Debug/net10.0/TmsApi.Application.AssemblyInfo.cs
+/Users/administrator/mk_TmsApi/TmsApi.Application/obj/Debug/net10.0/TmsApi.Application.csproj.CoreCompileInputs.cache
+/Users/administrator/mk_TmsApi/TmsApi.Application/obj/Debug/net10.0/TmsApi.Application.sourcelink.json
+/Users/administrator/mk_TmsApi/TmsApi.Application/obj/Debug/net10.0/TmsApi.A.8F6B91CF.Up2Date
+/Users/administrator/mk_TmsApi/TmsApi.Application/obj/Debug/net10.0/TmsApi.Application.dll
+/Users/administrator/mk_TmsApi/TmsApi.Application/obj/Debug/net10.0/refint/TmsApi.Application.dll
+/Users/administrator/mk_TmsApi/TmsApi.Application/obj/Debug/net10.0/TmsApi.Application.pdb
+/Users/administrator/mk_TmsApi/TmsApi.Application/obj/Debug/net10.0/ref/TmsApi.Application.dll

@@ -1,0 +1,42 @@
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using TmsApi.Domain.Entities;
+
+
+namespace TmsApi.Infrastructure.Persistence.Configurations;
+
+public class StudentConfiguration : IEntityTypeConfiguration<Student>
+{
+    public void Configure(EntityTypeBuilder<Student> builder)
+    {
+        builder.HasKey(s => s.Id);
+
+        builder.Property(s => s.RegistrationNumber)
+            .IsRequired();
+
+        builder.Property(s => s.Name)
+            .IsRequired();
+
+        builder.Property(s => s.GPA)
+            .IsRequired();
+
+        builder.Property(s => s.IsActive)
+            .IsRequired();
+
+        builder.Property<DateTime>("LastUpdated")
+            .IsRequired()
+            .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+        builder.Property(s => s.Version)
+            .HasColumnName("xmin")
+            .IsRowVersion()
+            .ValueGeneratedOnAddOrUpdate();
+
+         builder.HasQueryFilter(s => !s.IsDeleted);
+
+        builder.HasMany(s => s.Enrollments)
+            .WithOne(e => e.Student)
+            .HasForeignKey(e => e.StudentId);
+
+    }
+}
