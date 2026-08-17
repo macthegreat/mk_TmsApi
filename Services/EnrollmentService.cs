@@ -18,13 +18,13 @@ public class EnrollmentService(TmsDbContext context, ILogger<EnrollmentService> 
 {
     private readonly Dictionary<string, EnrollmentRecord> _store = new();
 
-    private readonly ILogger<EnrollmentService> _logger;
+    //private readonly ILogger<EnrollmentService> _logger;
     public Task<EnrollmentRecord> EnrollAsync(string studentId, string courseCode)
     {
         var existing = _store.Values.FirstOrDefault(e => e.StudentId == studentId && e.CourseCode == courseCode);
         if (existing is not null)
         {
-            _logger.LogWarning(
+            logger.LogWarning(
                 "Duplicate enrollment attempt {StudentId} already in {CourseCode} (record {EnrollmentId})",
                 studentId, courseCode, existing.Id);
             return Task.FromResult(existing);
@@ -32,7 +32,7 @@ public class EnrollmentService(TmsDbContext context, ILogger<EnrollmentService> 
         var id = Guid.NewGuid().ToString("N")[..8];
         var record = new EnrollmentRecord(id, studentId, courseCode, DateTime.UtcNow); _store[id] = record;
 
-        _logger.LogInformation(
+        logger.LogInformation(
         "Enrolled {StudentId} in {CourseCode} record {EnrollmentId}", studentId, courseCode, id);
         return Task.FromResult(record);
     }
@@ -42,7 +42,7 @@ public class EnrollmentService(TmsDbContext context, ILogger<EnrollmentService> 
         _store.TryGetValue(id, out var record);
         if (record is null)
         {
-            _logger.LogWarning("Enrollment record {EnrollmentId} not found", id);
+            logger.LogWarning("Enrollment record {EnrollmentId} not found", id);
         }
         return Task.FromResult(record);
     }
@@ -57,11 +57,11 @@ public class EnrollmentService(TmsDbContext context, ILogger<EnrollmentService> 
         var removed = _store.Remove(id);
         if (removed)
         {
-            _logger.LogInformation("Enrollment record {EnrollmentId} deleted", id);
+            logger.LogInformation("Enrollment record {EnrollmentId} deleted", id);
         }
         else
         {
-            _logger.LogWarning("Enrollment record {EnrollmentId} not found for deletion", id);
+            logger.LogWarning("Enrollment record {EnrollmentId} not found for deletion", id);
         }
         return Task.FromResult(removed);
     }
@@ -80,17 +80,17 @@ public class EnrollmentService(TmsDbContext context, ILogger<EnrollmentService> 
         {
             CourseId = courseId,
             StudentId = request.StudentId,
-            EnrolledAt =DateTime.UtcNow
+            EnrolledAt = DateTime.UtcNow
         };
-    context.Enrollments.Add(enrollment);
-    await context.SaveChangesAsync(ct);
+        context.Enrollments.Add(enrollment);
+        await context.SaveChangesAsync(ct);
 
 
-            logger.LogInformation(
-            "Created enrollment {EnrollmentId} for student {StudentId} in course {CourseId}",
-            enrollment.Id,
-            enrollment.StudentId,
-            enrollment.CourseId);
+        logger.LogInformation(
+        "Created enrollment {EnrollmentId} for student {StudentId} in course {CourseId}",
+        enrollment.Id,
+        enrollment.StudentId,
+        enrollment.CourseId);
 
         var result = await GetByIdAsync(
             courseId,
@@ -100,6 +100,22 @@ public class EnrollmentService(TmsDbContext context, ILogger<EnrollmentService> 
         return result!;
 
     }
+
+    public async Task<IReadOnlyList<EnrollmentResponseDto>> GetByCourseAsync(
+    int courseId,
+    CancellationToken ct)
+    {
+        return await context.Enrollments
+            .AsNoTracking()
+            .Where(e => e.CourseId == courseId)
+            .Select(e => new EnrollmentResponseDto(
+                e.Id,
+                e.CourseId,
+                e.StudentId,
+                e.EnrolledAt))
+            .ToListAsync(ct);
+    }
+
 }
 public class TmsDatabaseException(string Message) : Exception(Message);
 
