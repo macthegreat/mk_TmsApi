@@ -42,6 +42,16 @@ public class CourseService(
 
         return course;
     }
+
+    public async Task<Course?> GetByCodeAsync(
+    string code,
+    CancellationToken ct)
+{
+    return await context.Courses
+        .AsNoTracking()
+        .Include(c => c.Enrollments)
+        .FirstOrDefaultAsync(c => c.Code == code, ct);
+}
      public async Task<bool> CodeExistsAsync(
         string code,
         CancellationToken ct)

@@ -9,11 +9,27 @@ using TmsApi.Infrastructure.Services;
 using Microsoft.Extensions.Options;
 using TmsApi.Api.Filters;
 using TmsApi.Infrastructure.SeedData;
+using Asp.Versioning;
+using TmsApi.Middleware;
+using MediatR;
+using FluentValidation;
+using TmsApi.Application.Behaviors;
+using TmsApi.Application.Enrollments.Commands;
+using TmsApi.Api.ExceptionHandlers;
+
 
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+// Add services to the container
+builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(EnrollStudentHandler).Assembly));
+builder.Services.AddValidatorsFromAssembly(typeof(EnrollStudentValidator).Assembly);
+builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(LoggingBehavior<,>)); 
+builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>(); 
+builder.Services.AddProblemDetails();
+
+
 
 builder.Services.AddControllers();
 builder.Services.AddAuthentication();
@@ -46,12 +62,44 @@ builder.Services.AddControllers(Options =>
     Options.Filters.Add<AuditLogFilter>();
 });
 
+builder.Services.AddOpenApi("v1", options =>
+{
+    options.ShouldInclude = description =>
+        description.GroupName == "v1";
+});
+builder.Services.AddOpenApi("v2", options =>
+{
+    options.ShouldInclude = description =>
+        description.GroupName == "v2";
+});
+builder.Services.AddApiVersioning(options =>
+{
+    options.DefaultApiVersion = new ApiVersion(1, 0); options.AssumeDefaultVersionWhenUnspecified = true; options.ReportApiVersions = true;
+    options.ApiVersionReader = new UrlSegmentApiVersionReader();
+})
+.AddApiExplorer(options =>
+{
+    options.GroupNameFormat = "'v'VVV";
+    options.SubstituteApiVersionInUrl = true;
+});
+
 var app = builder.Build();
+app.UseExceptionHandler();
+
 
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
-    app.MapScalarApiReference();
+    app.MapScalarApiReference(options =>
+    {
+        options.WithTitle("TMS API Reference")
+        .WithTheme(ScalarTheme.DeepSpace)
+.WithDefaultHttpClient(ScalarTarget.CSharp, ScalarClient.HttpClient);  // Tell Scalar to pull both documents into its sidebar dropdown
+        options
+                .AddDocument("v1", "API Version 1.0")
+                .AddDocument("v2", "API Version 2.0");
+    });
+
 
 }
 
@@ -64,6 +112,8 @@ app.UseRouting();
 app.UseAuthentication();
 
 app.UseAuthorization();
+
+app.UseMiddleware<V1DeprecationMiddleware>();
 
 app.MapControllers();
 
@@ -106,7 +156,7 @@ new() { RegistrationNumber = "TMS-2026-0005", Name = "EvanWright", GPA = 2.5m, I
         };
         context.Students.AddRange(students);
 
-        var courses= new List<Course>
+        var courses = new List<Course>
         {
             new() { Code = "CS-101", Title = "Introduction to ComputerScience", MaxCapacity = 30 },
             new() { Code = "CS-201", Title = "Data Structures and Algorithms", MaxCapacity = 25 },
@@ -115,7 +165,7 @@ new() { RegistrationNumber = "TMS-2026-0005", Name = "EvanWright", GPA = 2.5m, I
         context.Courses.AddRange(courses);
         context.SaveChanges();
 
-        var enrollments=new List<Enrollment>
+        var enrollments = new List<Enrollment>
         {
             new() { StudentId = students[0].Id, CourseId = courses[0].Id, Grade = 4.0m },
             new() { StudentId = students[0].Id, CourseId = courses[1].Id, Grade = 3.6m },
@@ -129,9 +179,9 @@ new() { RegistrationNumber = "TMS-2026-0005", Name = "EvanWright", GPA = 2.5m, I
 
 if (app.Environment.IsDevelopment())
 {
-using var scope = app.Services.CreateScope();
+    using var scope = app.Services.CreateScope();
 
-var context = scope.ServiceProvider.GetRequiredService<TmsDbContext>();
+    var context = scope.ServiceProvider.GetRequiredService<TmsDbContext>();
 
     await DataSeeder.SeedAsync(context);
 }
