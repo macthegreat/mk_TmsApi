@@ -13,6 +13,8 @@ public interface ICourseService
     Task<PagedResponse<CourseResponseDto>> GetCoursesAsync(PagedRequest request, CancellationToken ct);
     Task<Course?> GetByCodeAsync(string code, CancellationToken ct);
 
+    Task<IReadOnlyList<Course>> GetAllAsync(CancellationToken ct);
+
 
 }
 

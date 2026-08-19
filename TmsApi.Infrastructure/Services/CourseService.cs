@@ -60,10 +60,19 @@ public class CourseService(
             .AnyAsync(c => c.Code == code, ct);
     }
 
+    public async Task<IReadOnlyList<Course>> GetAllAsync(
+    CancellationToken ct)
+{
+    return await context.Courses
+        .AsNoTracking()
+        .Include(c => c.Enrollments)
+        .OrderBy(c => c.Title)
+        .ThenBy(c => c.Id)
+        .ToListAsync(ct);
+}
+  
 
 //m6s2part c
-
-
 public async Task<PagedResponse<CourseResponseDto>> GetCoursesAsync(
     PagedRequest request,
     CancellationToken ct)
