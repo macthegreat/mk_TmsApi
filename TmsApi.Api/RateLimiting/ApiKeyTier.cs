@@ -1,12 +1,20 @@
 
 namespace TmsApi.Api.RateLimiting;
+
+public enum ApiKeyTier
+{
+    Anonymous = 0,
+    Free = 1,
+    Paid = 2
+}
 public static class ApiKeyResolver
+
 {
 private static readonly Dictionary<string, ApiKeyTier> Keys = new(StringComparer.Ordinal)
+
 {
      ["tms-free-demo-001"] = ApiKeyTier.Free,
-        ["tms-paid-001"]   = ApiKeyTier.Paid
-    
+     ["tms-paid-001"]   = ApiKeyTier.Paid
 };
 public static (string PartitionKey, ApiKeyTier Tier) Resolve(HttpContext ctx)
     {

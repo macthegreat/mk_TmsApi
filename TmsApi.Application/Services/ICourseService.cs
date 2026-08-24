@@ -1,5 +1,6 @@
 using TmsApi.Domain.Entities;
 using TmsApi.Application.Dtos;
+using TmsApi.Application.Courses.Commands;
 
 
 namespace TmsApi.Application.Services;
@@ -14,6 +15,7 @@ public interface ICourseService
     Task<Course?> GetByCodeAsync(string code, CancellationToken ct);
 
     Task<IReadOnlyList<Course>> GetAllAsync(CancellationToken ct);
+    Task<bool> UpdateAsync(UpdateCourseCommand command,CancellationToken ct);
 
 
 }

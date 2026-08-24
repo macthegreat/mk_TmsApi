@@ -13,6 +13,4 @@ public interface ICachedCourseService
 
     Task InvalidateCourseCacheAsync(
         CancellationToken ct);
-
-    //Task<List<CourseDto>>GetAllAsync(CancellationToken ct);
 }

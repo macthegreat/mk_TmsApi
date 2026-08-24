@@ -4,6 +4,7 @@ using TmsApi.Infrastructure.Persistence;
 using TmsApi.Domain.Entities;
 using TmsApi.Application.Dtos;
 using TmsApi.Application.Services;
+using TmsApi.Application.Courses.Commands;
 
 namespace TmsApi.Infrastructure.Services;
 
@@ -124,5 +125,28 @@ public async Task<PagedResponse<CourseResponseDto>> GetCoursesAsync(
         Page = request.Page,
         PageSize = request.PageSize
     };
+}
+
+public async Task<bool> UpdateAsync(
+    UpdateCourseCommand command,
+    CancellationToken ct)
+{
+    var course = await context.Courses
+        .FirstOrDefaultAsync(c => c.Id == command.Id, ct);
+
+    if (course is null)
+    {
+        return false;
+    }
+
+    course.Title = command.Title;
+
+    await context.SaveChangesAsync(ct);
+
+    logger.LogInformation(
+        "Updated course {CourseId}",
+        course.Id);
+
+    return true;
 }
 }

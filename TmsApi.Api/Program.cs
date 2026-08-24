@@ -18,9 +18,9 @@ using TmsApi.Application.Enrollments.Commands;
 using TmsApi.Api.ExceptionHandlers;
 using Microsoft.Extensions.Caching.Hybrid;
 using System.Threading.RateLimiting; 
-
+using TmsApi.Api.RateLimiting;
 using Microsoft.AspNetCore.RateLimiting; 
-using mk_TmsApi.Api.RateLimiting;
+
 
 
 
@@ -191,12 +191,38 @@ options.OnRejected = async (context, ct) =>
 });
 
 
+builder.Services.AddRateLimiter(options =>
+{
+    options.AddConcurrencyLimiter("transcripts", opt =>
+    {
+        opt.PermitLimit = 5;
+        opt.QueueLimit = 20;
+        opt.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+    });
+
+    options.AddTokenBucketLimiter("search", opt =>
+    {
+        opt.TokenLimit = 10;
+        opt.TokensPerPeriod = 5;
+        opt.ReplenishmentPeriod = TimeSpan.FromSeconds(10);
+        opt.QueueLimit = 2;
+    });
+
+
+
+     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    });
+
+
+
 
 //check this section above
 var app = builder.Build();
 //app.UseCors("AllowAngular");
 app.UseCors("TmsClient");
 app.UseExceptionHandler();
+//app.MapHealthChecks("/health/live").DisableRateLimiting(); 
+//app.MapHealthChecks("/health/ready").DisableRateLimiting();
 
 
 if (app.Environment.IsDevelopment())
