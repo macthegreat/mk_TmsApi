@@ -20,9 +20,13 @@ using Microsoft.Extensions.Caching.Hybrid;
 using System.Threading.RateLimiting; 
 using TmsApi.Api.RateLimiting;
 using Microsoft.AspNetCore.RateLimiting; 
-
-
-
+using TmsApi.Infrastructure.Transcripts;
+using System.Threading.Channels;
+using TmsApi.Application.Transcripts;
+using TmsApi.Infrastructure.Workers;
+using TmsApi.Application.Notifications;
+using TmsApi.Api.Hubs;
+using TmsApi.Api.Notifications;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -213,12 +217,23 @@ builder.Services.AddRateLimiter(options =>
      options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
     });
 
+builder.Services.AddSingleton<ITranscriptStatusStore, InMemoryTranscriptStatusStore>();
+
+builder.Services.AddSingleton(Channel.CreateBounded<TranscriptRequest>( new BoundedChannelOptions(100)
+    {
+        FullMode = BoundedChannelFullMode.Wait
+}));
+
+builder.Services.AddHostedService<TranscriptWorker>();
+builder.Services.AddSignalR();
+builder.Services.AddSingleton<ITranscriptNotificationService, SignalRTranscriptNotificationService>();
 
 
 
 //check this section above
 var app = builder.Build();
 //app.UseCors("AllowAngular");
+app.MapHub<TmsHub>("/hubs/tms");
 app.UseCors("TmsClient");
 app.UseExceptionHandler();
 //app.MapHealthChecks("/health/live").DisableRateLimiting(); 
