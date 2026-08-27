@@ -31,27 +31,14 @@ using Microsoft.AspNetCore.Antiforgery;
 using TmsApi.Infrastructure.Identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using System.IdentityModel.Tokens.Jwt;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using System.Text;
 
 
 
-var crypto = new CryptoDemoService();
 
-var hash1 = crypto.HashUserPassword("Password123!");
-var hash2 = crypto.HashUserPassword("Password123!");
-
-Console.WriteLine($"Hash 1: {hash1}");
-Console.WriteLine($"Hash 2: {hash2}");
-
-var match1 = crypto.VerifyUserPassword(
-    "Password123!",
-    hash1);
-
-var match2 = crypto.VerifyUserPassword(
-    "Password123!",
-    hash2);
-
-Console.WriteLine($"Hash 1 verifies: {match1}");
-Console.WriteLine($"Hash 2 verifies: {match2}");
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -265,18 +252,43 @@ builder.Services.AddProblemDetails();
 
 builder.Services.AddIdentityCore<TmsUser>(options =>
 {
- options.Password.RequiredLength = 12;
- options.Password.RequireUppercase = true;
- options.Password.RequireDigit = true;
- options.Password.RequireNonAlphanumeric = true;
+    options.Password.RequiredLength = 12;
+    options.Password.RequireUppercase = true;
+    options.Password.RequireDigit = true;
+    options.Password.RequireNonAlphanumeric = true;
 
 
- options.Lockout.MaxFailedAccessAttempts = 5;
- options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
- options.Lockout.AllowedForNewUsers = true;
+    options.Lockout.MaxFailedAccessAttempts = 5;
+    options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
+    options.Lockout.AllowedForNewUsers = true;
 })
 .AddRoles<IdentityRole>()
 .AddEntityFrameworkStores<TmsDbContext>();
+//
+builder.Services.AddScoped<TokenService>();
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme =
+JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme =
+JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        ValidIssuer = builder.Configuration["Jwt:Issuer"],
+        ValidAudience = builder.Configuration["Jwt:Audience"],
+        IssuerSigningKey = new SymmetricSecurityKey(
+    Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!))
+    };
+});
+
+//
 
 
 //check this section above
@@ -315,21 +327,21 @@ app.UseAuthorization();
 //
 app.Use(async (context, next) =>
 {
-   if (context.User.Identity?.IsAuthenticated == true || context.
-       Request.Cookies.ContainsKey("tms_auth"))
-   {
-       var antiforgery = context.RequestServices
-            .GetRequiredService<IAntiforgery>();
-       var tokens = antiforgery.GetAndStoreTokens(context);
-       context.Response.Cookies.Append("XSRF-TOKEN", tokens.RequestToken!,
-        new CookieOptions
-          {
-              HttpOnly = false,
-              Secure = !builder.Environment.IsDevelopment(),
-              SameSite = SameSiteMode.Strict
-          });
-   }
-   await next(context);
+    if (context.User.Identity?.IsAuthenticated == true || context.
+        Request.Cookies.ContainsKey("tms_auth"))
+    {
+        var antiforgery = context.RequestServices
+             .GetRequiredService<IAntiforgery>();
+        var tokens = antiforgery.GetAndStoreTokens(context);
+        context.Response.Cookies.Append("XSRF-TOKEN", tokens.RequestToken!,
+         new CookieOptions
+         {
+             HttpOnly = false,
+             Secure = !builder.Environment.IsDevelopment(),
+             SameSite = SameSiteMode.Strict
+         });
+    }
+    await next(context);
 });
 
 
