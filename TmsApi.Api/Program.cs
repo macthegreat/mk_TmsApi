@@ -17,9 +17,9 @@ using TmsApi.Application.Behaviors;
 using TmsApi.Application.Enrollments.Commands;
 using TmsApi.Api.ExceptionHandlers;
 using Microsoft.Extensions.Caching.Hybrid;
-using System.Threading.RateLimiting; 
+using System.Threading.RateLimiting;
 using TmsApi.Api.RateLimiting;
-using Microsoft.AspNetCore.RateLimiting; 
+using Microsoft.AspNetCore.RateLimiting;
 using TmsApi.Infrastructure.Transcripts;
 using System.Threading.Channels;
 using TmsApi.Application.Transcripts;
@@ -27,6 +27,31 @@ using TmsApi.Infrastructure.Workers;
 using TmsApi.Application.Notifications;
 using TmsApi.Api.Hubs;
 using TmsApi.Api.Notifications;
+using Microsoft.AspNetCore.Antiforgery;
+using TmsApi.Infrastructure.Identity;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+
+
+
+var crypto = new CryptoDemoService();
+
+var hash1 = crypto.HashUserPassword("Password123!");
+var hash2 = crypto.HashUserPassword("Password123!");
+
+Console.WriteLine($"Hash 1: {hash1}");
+Console.WriteLine($"Hash 2: {hash2}");
+
+var match1 = crypto.VerifyUserPassword(
+    "Password123!",
+    hash1);
+
+var match2 = crypto.VerifyUserPassword(
+    "Password123!",
+    hash2);
+
+Console.WriteLine($"Hash 1 verifies: {match1}");
+Console.WriteLine($"Hash 2 verifies: {match2}");
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -58,11 +83,11 @@ builder.Services.AddDbContext<TmsDbContext>(options =>
 
 builder.Services.AddHybridCache(options =>
 {
-options.DefaultEntryOptions = new HybridCacheEntryOptions
-{
-Expiration = TimeSpan.FromMinutes(10),
-LocalCacheExpiration = TimeSpan.FromMinutes(2)
-};
+    options.DefaultEntryOptions = new HybridCacheEntryOptions
+    {
+        Expiration = TimeSpan.FromMinutes(10),
+        LocalCacheExpiration = TimeSpan.FromMinutes(2)
+    };
 });
 builder.Services.AddScoped<ICachedCourseService, CachedCourseService>();
 
@@ -115,81 +140,83 @@ builder.Services.AddApiVersioning(options =>
 });
 
 //check this section below
-var allowedOrigins = builder.Configuration .GetSection("AllowedOrigins").Get<string[]>() ?? ["http://localhost:4200"];
+var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>() ?? ["http://localhost:4200"];
 
 
- builder.Services.AddCors(options =>
-   {
-       options.AddPolicy("TmsClient", policy =>
-       {
-           policy.WithOrigins(allowedOrigins)
+builder.Services.AddCors(options =>
+  {
+      options.AddPolicy("TmsClient", policy =>
+      {
+          policy.WithOrigins(allowedOrigins)
 .AllowAnyHeader()
 .AllowAnyMethod()
-.AllowCredentials() 
+.AllowCredentials()
 .SetPreflightMaxAge(TimeSpan.FromMinutes(10));
-       });
-   });
+      });
+  });
 
 
 builder.Services.AddRateLimiter(options =>
 {
-options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext,
-string>(httpContext =>
-{
-    var (partitionKey, tier) = ApiKeyResolver.Resolve(httpContext);
-    return tier switch
+    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext,
+    string>(httpContext =>
     {
-        ApiKeyTier.Paid => RateLimitPartition.GetTokenBucketLimiter
-        (
-            partitionKey: $"paid:{partitionKey}",
-            factory: _ => new TokenBucketRateLimiterOptions
-            {
-                TokenLimit = 200,
-TokensPerPeriod = 100,
-ReplenishmentPeriod = TimeSpan.FromSeconds(10),
- QueueLimit = 0,
-AutoReplenishment = true
-            }
-        ),
-        ApiKeyTier.Free => RateLimitPartition.GetTokenBucketLimiter
-        (
-            partitionKey: $"free:{partitionKey}",
-            factory: _ => new TokenBucketRateLimiterOptions
-            {
-                 TokenLimit = 30,
-TokensPerPeriod = 10,
-ReplenishmentPeriod = TimeSpan.FromSeconds(10), QueueLimit = 0,
-AutoReplenishment = true
-            }
-        ),
-        _ => RateLimitPartition.GetTokenBucketLimiter(
-            partitionKey: $"anon:{partitionKey}",
-            factory: _ => new TokenBucketRateLimiterOptions
-            {
-                 TokenLimit = 10,
-TokensPerPeriod = 5,
-ReplenishmentPeriod = TimeSpan.FromSeconds(10), QueueLimit = 0,
-AutoReplenishment = true
-            })
-    };
-});
-options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
-options.OnRejected = async (context, ct) =>
-{
-     var retryAfter = "10";
-     if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var ts))
-     retryAfter = ((int)ts.TotalSeconds).ToString();
-     context.HttpContext.Response.Headers.RetryAfter = retryAfter;
-     context.HttpContext.Response.ContentType = "application/problem +json";
-     await context.HttpContext.Response.WriteAsJsonAsync(new ProblemDetails
-     {
-         Title = "Rate limit exceeded",
-         Detail = $"Too many requests. Retry after {retryAfter} seconds. ",
-         Status = StatusCodes.Status429TooManyRequests,
-         Type = "https://tms.local/errors/rate_limit_exceeded"
+        var (partitionKey, tier) = ApiKeyResolver.Resolve(httpContext);
+        return tier switch
+        {
+            ApiKeyTier.Paid => RateLimitPartition.GetTokenBucketLimiter
+            (
+                partitionKey: $"paid:{partitionKey}",
+                factory: _ => new TokenBucketRateLimiterOptions
+                {
+                    TokenLimit = 200,
+                    TokensPerPeriod = 100,
+                    ReplenishmentPeriod = TimeSpan.FromSeconds(10),
+                    QueueLimit = 0,
+                    AutoReplenishment = true
+                }
+            ),
+            ApiKeyTier.Free => RateLimitPartition.GetTokenBucketLimiter
+            (
+                partitionKey: $"free:{partitionKey}",
+                factory: _ => new TokenBucketRateLimiterOptions
+                {
+                    TokenLimit = 30,
+                    TokensPerPeriod = 10,
+                    ReplenishmentPeriod = TimeSpan.FromSeconds(10),
+                    QueueLimit = 0,
+                    AutoReplenishment = true
+                }
+            ),
+            _ => RateLimitPartition.GetTokenBucketLimiter(
+                partitionKey: $"anon:{partitionKey}",
+                factory: _ => new TokenBucketRateLimiterOptions
+                {
+                    TokenLimit = 10,
+                    TokensPerPeriod = 5,
+                    ReplenishmentPeriod = TimeSpan.FromSeconds(10),
+                    QueueLimit = 0,
+                    AutoReplenishment = true
+                })
+        };
+    });
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.OnRejected = async (context, ct) =>
+    {
+        var retryAfter = "10";
+        if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var ts))
+            retryAfter = ((int)ts.TotalSeconds).ToString();
+        context.HttpContext.Response.Headers.RetryAfter = retryAfter;
+        context.HttpContext.Response.ContentType = "application/problem +json";
+        await context.HttpContext.Response.WriteAsJsonAsync(new ProblemDetails
+        {
+            Title = "Rate limit exceeded",
+            Detail = $"Too many requests. Retry after {retryAfter} seconds. ",
+            Status = StatusCodes.Status429TooManyRequests,
+            Type = "https://tms.local/errors/rate_limit_exceeded"
 
-     },ct);
-};
+        }, ct);
+    };
 
 
 });
@@ -214,14 +241,14 @@ builder.Services.AddRateLimiter(options =>
 
 
 
-     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
-    });
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+});
 
 builder.Services.AddSingleton<ITranscriptStatusStore, InMemoryTranscriptStatusStore>();
 
-builder.Services.AddSingleton(Channel.CreateBounded<TranscriptRequest>( new BoundedChannelOptions(100)
-    {
-        FullMode = BoundedChannelFullMode.Wait
+builder.Services.AddSingleton(Channel.CreateBounded<TranscriptRequest>(new BoundedChannelOptions(100)
+{
+    FullMode = BoundedChannelFullMode.Wait
 }));
 
 builder.Services.AddHostedService<TranscriptWorker>();
@@ -229,16 +256,38 @@ builder.Services.AddSignalR();
 builder.Services.AddSingleton<ITranscriptNotificationService, SignalRTranscriptNotificationService>();
 
 
+builder.Services.AddAntiforgery(options =>
+{
+    options.HeaderName = "X-XSRF-TOKEN";
+});
+builder.Services.AddProblemDetails();
+
+
+builder.Services.AddIdentityCore<TmsUser>(options =>
+{
+ options.Password.RequiredLength = 12;
+ options.Password.RequireUppercase = true;
+ options.Password.RequireDigit = true;
+ options.Password.RequireNonAlphanumeric = true;
+
+
+ options.Lockout.MaxFailedAccessAttempts = 5;
+ options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
+ options.Lockout.AllowedForNewUsers = true;
+})
+.AddRoles<IdentityRole>()
+.AddEntityFrameworkStores<TmsDbContext>();
+
 
 //check this section above
 var app = builder.Build();
 //app.UseCors("AllowAngular");
-app.MapHub<TmsHub>("/hubs/tms");
+app.MapHub<TmsHub>("/hubs/tms").RequireCors("TmsClient");
+//app.MapHub<TmsHub>("/hubs/tms");
 app.UseCors("TmsClient");
 app.UseExceptionHandler();
 //app.MapHealthChecks("/health/live").DisableRateLimiting(); 
 //app.MapHealthChecks("/health/ready").DisableRateLimiting();
-
 
 if (app.Environment.IsDevelopment())
 {
@@ -258,10 +307,34 @@ if (app.Environment.IsDevelopment())
 
 app.UseExceptionHandler();
 app.UseStatusCodePages();
+app.UseStatusCodePages();
 app.UseRouting();
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
+//
+app.Use(async (context, next) =>
+{
+   if (context.User.Identity?.IsAuthenticated == true || context.
+       Request.Cookies.ContainsKey("tms_auth"))
+   {
+       var antiforgery = context.RequestServices
+            .GetRequiredService<IAntiforgery>();
+       var tokens = antiforgery.GetAndStoreTokens(context);
+       context.Response.Cookies.Append("XSRF-TOKEN", tokens.RequestToken!,
+        new CookieOptions
+          {
+              HttpOnly = false,
+              Secure = !builder.Environment.IsDevelopment(),
+              SameSite = SameSiteMode.Strict
+          });
+   }
+   await next(context);
+});
+
+
+//
+
 app.UseMiddleware<V1DeprecationMiddleware>();
 app.MapControllers();
 
