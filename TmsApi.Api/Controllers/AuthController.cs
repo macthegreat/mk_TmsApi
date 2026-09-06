@@ -9,6 +9,7 @@ using TmsApi.Infrastructure.Persistence;
 using TmsApi.Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.RateLimiting;
 
 
 
@@ -28,6 +29,7 @@ public class AuthController : ControllerBase
         _context = context;
         _tokenService = tokenService;
     }
+    [EnableRateLimiting("AuthLimiter")]
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginRequest request)
     {

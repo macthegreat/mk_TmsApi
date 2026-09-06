@@ -9,6 +9,8 @@ public class Enrollment
     public DateTime EnrolledAt {get;set;} =DateTime.UtcNow;
     public bool IsArchived { get; set; }
 
+     public string? Status { get; set; }
+
     public Student Student { get; set; } = null!;
 
     public Course Course { get; set; } = null!;

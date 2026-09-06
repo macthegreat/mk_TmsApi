@@ -1,3 +1,4 @@
+
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc;
 using Scalar.AspNetCore;
@@ -35,6 +36,8 @@ using System.IdentityModel.Tokens.Jwt;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using System.Text;
+using TmsApi.Api.Authorization;
+using Microsoft.AspNetCore.Authorization;
 
 
 
@@ -49,8 +52,6 @@ builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(LoggingBehavi
 builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
-
-
 
 builder.Services.AddControllers();
 builder.Services.AddAuthentication();
@@ -86,10 +87,6 @@ builder.Services.AddCors(options =>
               .AllowAnyHeader()
               .AllowAnyMethod());
 });
-
-
-
-
 builder.Host.UseDefaultServiceProvider(options =>
 {
     options.ValidateScopes = true;
@@ -97,7 +94,6 @@ builder.Host.UseDefaultServiceProvider(options =>
 });
 
 builder.Services.AddProblemDetails();
-
 builder.Services.AddScoped<ICourseService, CourseService>();
 builder.Services.AddScoped<IEnrollmentService, EnrollmentService>();
 builder.Services.AddControllers(Options =>
@@ -141,8 +137,6 @@ builder.Services.AddCors(options =>
 .SetPreflightMaxAge(TimeSpan.FromMinutes(10));
       });
   });
-
-
 builder.Services.AddRateLimiter(options =>
 {
     options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext,
@@ -207,8 +201,6 @@ builder.Services.AddRateLimiter(options =>
 
 
 });
-
-
 builder.Services.AddRateLimiter(options =>
 {
     options.AddConcurrencyLimiter("transcripts", opt =>
@@ -225,9 +217,6 @@ builder.Services.AddRateLimiter(options =>
         opt.ReplenishmentPeriod = TimeSpan.FromSeconds(10);
         opt.QueueLimit = 2;
     });
-
-
-
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 });
 
@@ -288,6 +277,21 @@ JwtBearerDefaults.AuthenticationScheme;
     };
 });
 
+
+builder.Services.AddAuthorizationBuilder()
+    .AddPolicy("CanEditCourse", policy =>
+policy.Requirements.Add(new CourseInstructorRequirement()));
+builder.Services.AddSingleton<IAuthorizationHandler, CourseInstructorHandler>();
+
+builder.Services.AddRateLimiter(options =>
+{
+options.AddFixedWindowLimiter("AuthLimiter", opt =>
+    {
+        opt.PermitLimit = 5;
+        opt.Window = TimeSpan.FromMinutes(1);
+        opt.QueueLimit = 0;
+}); });
+
 //
 
 
@@ -316,6 +320,41 @@ if (app.Environment.IsDevelopment())
 }
 
 // Configure the HTTP request pipeline.
+// app.Use(async (context, next) =>
+// {
+// context.Response.Headers.Append("X-Content-Type-Options",
+// "nosniff");
+// context.Response.Headers.Append("X-Frame-Options", "DENY"); context.Response.Headers.Append("Referrer-Policy", "strict-origin-when-cross-origin");
+//     context.Response.Headers.Append(
+//                 "Content-Security-Policy",
+//         "default-src 'self'; script-src 'self'; style-src 'self''unsafe-inline';");
+//     await next();
+// });
+
+// Configure the HTTP request pipeline.
+
+app.Use(async (context, next) =>
+{
+    context.Response.Headers.Append(
+        "X-Content-Type-Options",
+        "nosniff");
+
+    context.Response.Headers.Append(
+        "X-Frame-Options",
+        "DENY");
+
+    context.Response.Headers.Append(
+        "Referrer-Policy",
+        "strict-origin-when-cross-origin");
+
+    context.Response.Headers.Append(
+        "Content-Security-Policy",
+        "default-src 'self'; " +
+        "script-src 'self' 'unsafe-inline'; " +
+        "style-src 'self' 'unsafe-inline';");
+
+    await next();
+});
 
 app.UseExceptionHandler();
 app.UseStatusCodePages();
@@ -375,27 +414,35 @@ app.MapGet("/api/error", () =>
 using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<TmsDbContext>();
+
+   if (!app.Environment.IsEnvironment("Testing") &&
+    context.Database.IsRelational())
+{
     context.Database.Migrate();
+}
 
     if (!context.Students.Any())
     {
         var students = new List<Student>
         {
-new() { RegistrationNumber = "TMS-2026-0001", Name = "AliceSmith", GPA = 3.8m, IsActive = true },
-new() { RegistrationNumber = "TMS-2026-0002", Name = "Bob Jones", GPA = 2.9m, IsActive = true },
-new() { RegistrationNumber = "TMS-2026-0003", Name = "Charlie Brown", GPA = 3.4m, IsActive = false },
-new() { RegistrationNumber = "TMS-2026-0004", Name = "DianaPrince", GPA = 3.9m, IsActive = true },
-new() { RegistrationNumber = "TMS-2026-0005", Name = "EvanWright", GPA = 2.5m, IsActive = true }
+            new() { RegistrationNumber = "TMS-2026-0001", Name = "Alice Smith", GPA = 3.8m, IsActive = true },
+            new() { RegistrationNumber = "TMS-2026-0002", Name = "Bob Jones", GPA = 2.9m, IsActive = true },
+            new() { RegistrationNumber = "TMS-2026-0003", Name = "Charlie Brown", GPA = 3.4m, IsActive = false },
+            new() { RegistrationNumber = "TMS-2026-0004", Name = "Diana Prince", GPA = 3.9m, IsActive = true },
+            new() { RegistrationNumber = "TMS-2026-0005", Name = "Evan Wright", GPA = 2.5m, IsActive = true }
         };
+
         context.Students.AddRange(students);
 
         var courses = new List<Course>
         {
             new() { Code = "CS-101", Title = "Introduction to ComputerScience", MaxCapacity = 30 },
             new() { Code = "CS-201", Title = "Data Structures and Algorithms", MaxCapacity = 25 },
-            new() { Code = "MAT-101", Title = "Calculus I", MaxCapacity =40 }
+            new() { Code = "MAT-101", Title = "Calculus I", MaxCapacity = 40 }
         };
+
         context.Courses.AddRange(courses);
+
         context.SaveChanges();
 
         var enrollments = new List<Enrollment>
@@ -405,6 +452,7 @@ new() { RegistrationNumber = "TMS-2026-0005", Name = "EvanWright", GPA = 2.5m, I
             new() { StudentId = students[1].Id, CourseId = courses[0].Id, Grade = 2.8m },
             new() { StudentId = students[3].Id, CourseId = courses[1].Id, Grade = 3.9m }
         };
+
         context.Enrollments.AddRange(enrollments);
         context.SaveChanges();
     }
@@ -420,3 +468,5 @@ if (app.Environment.IsDevelopment())
 }
 
 app.Run();
+public partial class Program { }
+

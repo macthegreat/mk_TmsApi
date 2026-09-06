@@ -2,7 +2,8 @@ using Microsoft.AspNetCore.Mvc;
 using TmsApi.Domain.Entities;
 using TmsApi.Application.Services;
 using TmsApi.Application.Dtos;
-
+using Microsoft.AspNetCore.Authorization;
+using TmsApi.Infrastructure.Persistence;
 
 
 namespace TmsApi.Api.Controllers;
@@ -12,47 +13,86 @@ namespace TmsApi.Api.Controllers;
 [Tags("Courses")]
 [Produces("application/json")]
 [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+[Authorize(Roles = "Instructor,Admin")]
 
-public class CourseController(ICourseService courseService, LinkGenerator linkGenerator) : ControllerBase
+
+
+public class CourseController : ControllerBase
 {
+    private readonly TmsDbContext _context;
+    private readonly IAuthorizationService _authorizationService;
+
+    private readonly ICourseService _courseService;
+    private readonly LinkGenerator _linkGenerator;
+
+    public CourseController(
+      TmsDbContext context,
+      IAuthorizationService authorizationService,
+      ICourseService courseService,
+      LinkGenerator linkGenerator)
+    {
+        _context = context;
+        _authorizationService = authorizationService;
+        _courseService = courseService;
+        _linkGenerator = linkGenerator;
+
+    }
+    [HttpPut("{id}")]
+    public async Task<IActionResult> UpdateCourse(int id, [FromBody] UpdateCourseDto dto)
+    {
+        var course = await _context.Courses.FindAsync(id);
+        if (course == null) return NotFound();
+        var authResult = await
+        _authorizationService.AuthorizeAsync(User, course, "CanEditCourse");
+        if (!authResult.Succeeded)
+        {
+            return Forbid();
+        }
+        course.Title = dto.Title;
+        await _context.SaveChangesAsync(); return NoContent();
+
+    }
+
     [HttpGet("{id:int}", Name = nameof(GetCourseById))]
     [ProducesResponseType(typeof(CourseDetailDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     [EndpointSummary("Get a course by ID")]
     [EndpointDescription("Returns course details with HATEOAS links. Re turns 404 if the course does not exist.")]
+
+
+
     public async Task<IActionResult> GetCourseById(
       int id,
       CancellationToken ct)
     {
         // 1. Get course
-        var course = await courseService.GetByIdAsync(id, ct);
+        var course = await _courseService.GetByIdAsync(id, ct);
 
         // 2. Return 404 if course doesn't exist
         if (course is null)
             return NotFound();
 
         // 3. Build route paths
-
-        var selfPath = linkGenerator.GetPathByName(
+        var selfPath = _linkGenerator.GetPathByName(
             HttpContext,
             nameof(GetCourseById),
             new { id }
         );
 
-        var enrollmentsPath = linkGenerator.GetPathByName(
+        var enrollmentsPath = _linkGenerator.GetPathByName(
             HttpContext,
             "ListCourseEnrollments",
             new { courseId = id }
         );
 
         // Use the ACTUAL names of your PUT and DELETE actions here.
-        var updatePath = linkGenerator.GetPathByName(
+        var updatePath = _linkGenerator.GetPathByName(
           HttpContext,
           "UpdateCourse",
           new { id }
       );
 
-        var deletePath = linkGenerator.GetPathByName(
+        var deletePath = _linkGenerator.GetPathByName(
             HttpContext,
             "DeleteCourse",
             new { id }
@@ -81,7 +121,6 @@ public class CourseController(ICourseService courseService, LinkGenerator linkGe
                 new LinkDto("enroll", "POST", enrollmentsPath)
             );
         }
-
         // 6. Build CourseDetailDto
         var detailDto = new CourseDetailDto
         {
@@ -105,7 +144,7 @@ public class CourseController(ICourseService courseService, LinkGenerator linkGe
     public async Task<IActionResult> CreateCourse(CreateCourseRequest request, CancellationToken ct)
     {
 
-        if (await courseService.CodeExistsAsync(request.Code, ct))
+        if (await _courseService.CodeExistsAsync(request.Code, ct))
         {
             return Conflict(new ProblemDetails
             {
@@ -115,30 +154,23 @@ public class CourseController(ICourseService courseService, LinkGenerator linkGe
             });
         }
 
-        var result = await courseService.CreateAsync(request, ct);
+        var result = await _courseService.CreateAsync(request, ct);
 
         return CreatedAtAction(nameof(GetCourseById),
             new { id = result.Id },
             result);
 
     }
-
     [HttpGet]
     [ProducesResponseType(typeof(PagedResponse<CourseResponseDto>), StatusCodes.Status200OK)]
     [EndpointSummary("List courses with pagination")]
     [EndpointDescription("Returns a paginated, optionally filtered list of TMS courses. PageSize is capped at 50.")]
 
-
     public async Task<IActionResult> GetCourses(
     [FromQuery] PagedRequest request, CancellationToken ct)
     {
-        var result = await courseService.GetCoursesAsync(request, ct);
+        var result = await _courseService.GetCoursesAsync(request, ct);
         return Ok(result);
     }
-
-
-
-
-
 
 }
