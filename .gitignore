@@ -24,4 +24,5 @@ obj/
 TestResults/
 
 # Coverage
-coverage/
+*.log
+TmsApi.Api/appsettings.Development.json
